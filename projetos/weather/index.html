@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather CLI — Terminal Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0e17;
+    --bg-surface: #0f1520;
+    --bg-card: #131a28;
+    --green: #00ff41;
+    --cyan: #00d4ff;
+    --text: #c5cdd8;
+    --text-dim: #5a6577;
+    --red: #ff4757;
+    --orange: #ff9f43;
+    --yellow: #feca57;
+    --blue: #54a0ff;
+    --purple: #a864fd;
+    --border: #1a2236;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    font-family: 'Fira Code', monospace;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  /* ── Terminal Window ── */
+  .terminal-window {
+    width: 100%;
+    max-width: 860px;
+    height: 90vh;
+    max-height: 700px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+      0 0 40px rgba(0,255,65,.06),
+      0 20px 60px rgba(0,0,0,.5);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Title bar */
+  .title-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .title-bar .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: var(--red); }
+  .dot.y { background: var(--yellow); }
+  .dot.g { background: var(--green); }
+  .title-bar .title {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* Scrollable output */
+  .terminal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scroll-behavior: smooth;
+  }
+  .terminal-body::-webkit-scrollbar { width: 6px; }
+  .terminal-body::-webkit-scrollbar-track { background: transparent; }
+  .terminal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Output lines */
+  .output-line { white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.6; }
+  .output-line.cmd { color: var(--green); }
+
+  /* Input area */
+  .input-area {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+    flex-shrink: 0;
+  }
+  .prompt-symbol {
+    color: var(--green);
+    font-weight: 600;
+    margin-right: 8px;
+    font-size: 14px;
+    text-shadow: 0 0 8px rgba(0,255,65,.5);
+  }
+  .input-wrapper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  #cmdInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    caret-color: var(--green);
+  }
+
+  /* ── Colours helper classes ── */
+  .c-green  { color: var(--green); }
+  .c-cyan   { color: var(--cyan); }
+  .c-red    { color: var(--red); }
+  .c-orange { color: var(--orange); }
+  .c-yellow { color: var(--yellow); }
+  .c-blue   { color: var(--blue); }
+  .c-purple { color: var(--purple); }
+  .c-dim    { color: var(--text-dim); }
+  .c-white  { color: #fff; }
+  .bold     { font-weight: 700; }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 16px 6px;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    body { padding: 0; }
+    .terminal-window { max-width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; border: none; }
+    .output-line, #cmdInput { font-size: 11px; }
+  }
+
+  /* Glow animation for intro */
+  @keyframes glowPulse {
+    0%, 100% { text-shadow: 0 0 6px rgba(0,255,65,.4); }
+    50%      { text-shadow: 0 0 18px rgba(0,255,65,.8); }
+  }
+  .glow { animation: glowPulse 2s ease-in-out infinite; }
+
+  /* Scanline overlay */
+  .terminal-body::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,.04) 2px,
+      rgba(0,0,0,.04) 4px
+    );
+  }
+</style>
+</head>
+<body>
+
+<div class="terminal-window">
+  <div class="title-bar">
+    <span class="dot r"></span>
+    <span class="dot y"></span>
+    <span class="dot g"></span>
+    <span class="title">weather-cli — v2.4.0</span>
+  </div>
+
+  <div class="terminal-body" id="output"></div>
+
+  <div class="input-area">
+    <span class="prompt-symbol">❯</span>
+    <div class="input-wrapper">
+      <input id="cmdInput" type="text" autofocus autocomplete="off" spellcheck="false" placeholder="Type a command...">
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span id="statusLeft">6 cities loaded</span>
+    <span id="statusRight">↑↓ history &nbsp;│&nbsp; TAB autocomplete</span>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  WEATHER CLI SIMULATOR
+// ─────────────────────────────────────────────
+
+const $ = s => document.querySelector(s);
+const output = $('#output');
+const input  = $('#cmdInput');
+
+// ── City Data (base ranges per season-neutral sim) ──
+const CITIES = {
+  'sao paulo':      { display: 'São Paulo',      country: 'BR', tz: 'UTC-3',  tempBase: 24, tempRange: 10, humidity: 72, lat: -23.55, lon: -46.63 },
+  'rio de janeiro': { display: 'Rio de Janeiro',  country: 'BR', tz: 'UTC-3',  tempBase: 28, tempRange: 8,  humidity: 78, lat: -22.91, lon: -43.17 },
+  'new york':       { display: 'New York',        country: 'US', tz: 'UTC-5',  tempBase: 16, tempRange: 18, humidity: 62, lat: 40.71,  lon: -74.01 },
+  'tokyo':          { display: 'Tokyo',           country: 'JP', tz: 'UTC+9',  tempBase: 18, tempRange: 16, humidity: 68, lat: 35.68,  lon: 139.69 },
+  'london':         { display: 'London',          country: 'GB', tz: 'UTC+0',  tempBase: 12, tempRange: 12, humidity: 75, lat: 51.51,  lon: -0.13 },
+  'paris':          { display: 'Paris',           country: 'FR', tz: 'UTC+1',  tempBase: 14, tempRange: 14, humidity: 70, lat: 48.86,  lon: 2.35 },
+};
+
+const CONDITIONS = [
+  { name: 'Clear Sky',        icon: 'sun',         weight: 25 },
+  { name: 'Partly Cloudy',    icon: 'partcloud',   weight: 25 },
+  { name: 'Cloudy',           icon: 'cloud',       weight: 18 },
+  { name: 'Overcast',         icon: 'cloud',       weight: 8  },
+  { name: 'Light Rain',       icon: 'rain',        weight: 10 },
+  { name: 'Heavy Rain',       icon: 'heavyrain',   weight: 5  },
+  { name: 'Thunderstorm',     icon: 'thunder',     weight: 4  },
+  { name: 'Snow',             icon: 'snow',        weight: 3  },
+  { name: 'Fog',              icon: 'fog',         weight: 2  },
+];
+
+const WIND_DIRS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+
+// ── ASCII Weather Icons ──
+const ICONS = {
+  sun: [
+    '    \\   |   /   ',
+    '     .---.      ',
+    '  ‒ ( ☀   ) ‒  ',
+    '     `---\'      ',
+    '    /   |   \\   ',
+  ],
+  partcloud: [
+    '   \\  |  /      ',
+    '    .--.         ',
+    ' ‒ (    ).       ',
+    '    (____(__) .  ',
+    '   (________)   ',
+  ],
+  cloud: [
+    '                ',
+    '      .--.      ',
+    '   .-(    ).    ',
+    '  (___.__)__)   ',
+    '                ',
+  ],
+  rain: [
+    '      .--.      ',
+    '   .-(    ).    ',
+    '  (___.__)__)   ',
+    '   ‚ʻ‚ʻ‚ʻ‚ʻ    ',
+    '   ‚ʻ‚ʻ‚ʻ      ',
+  ],
+  heavyrain: [
+    '      .--.      ',
+    '   .-(    ).    ',
+    '  (___.__)__)   ',
+    '  ‚ʻ‚ʻ‚ʻ‚ʻ‚ʻ   ',
+    '  ‚ʻ‚ʻ‚ʻ‚ʻ‚ʻ   ',
+  ],
+  thunder: [
+    '      .--.      ',
+    '   .-(    ).    ',
+    '  (___.__)__)   ',
+    '    ⚡‚ʻ⚡‚ʻ     ',
+    '   ‚ʻ‚ʻ‚ʻ      ',
+  ],
+  snow: [
+    '      .--.      ',
+    '   .-(    ).    ',
+    '  (___.__)__)   ',
+    '   *  *  *  *   ',
+    '  *  *  *  *    ',
+  ],
+  fog: [
+    '                ',
+    '  _ - _ - _ -   ',
+    '   _ - _ - _    ',
+    '  _ - _ - _ -   ',
+    '                ',
+  ],
+};
+
+// ── Helpers ──
+const rand = (min, max) => Math.random() * (max - min) + min;
+const randInt = (min, max) => Math.floor(rand(min, max + 1));
+const pick = arr => arr[randInt(0, arr.length - 1)];
+
+function weightedPick(items) {
+  const total = items.reduce((s, i) => s + i.weight, 0);
+  let r = Math.random() * total;
+  for (const item of items) { r -= item.weight; if (r <= 0) return item; }
+  return items[0];
+}
+
+function tempColor(t) {
+  if (t <= 0)  return 'c-blue';
+  if (t <= 10) return 'c-cyan';
+  if (t <= 20) return 'c-green';
+  if (t <= 30) return 'c-yellow';
+  if (t <= 35) return 'c-orange';
+  return 'c-red';
+}
+
+function generateWeather(city) {
+  const cond = weightedPick(CONDITIONS);
+  const tempAdj = cond.name.includes('Snow') ? -12 : cond.name.includes('Rain') ? -3 : cond.name.includes('Clear') ? 3 : 0;
+  const temp = Math.round(city.tempBase + rand(-city.tempRange / 2, city.tempRange / 2) + tempAdj);
+  const feelsLike = temp + randInt(-3, 2);
+  const humidity = Math.min(99, Math.max(20, city.humidity + randInt(-15, 15)));
+  const windSpeed = randInt(2, 35);
+  const windDir = pick(WIND_DIRS);
+  const pressure = randInt(1005, 1030);
+  const visibility = cond.name === 'Fog' ? rand(0.5, 3).toFixed(1) : rand(5, 20).toFixed(1);
+  const uvIndex = cond.icon === 'sun' ? randInt(5, 11) : cond.icon === 'cloud' ? randInt(1, 4) : randInt(0, 3);
+  const dewPoint = Math.round(temp - ((100 - humidity) / 5));
+
+  return { cond, temp, feelsLike, humidity, windSpeed, windDir, pressure, visibility, uvIndex, dewPoint };
+}
+
+function generateForecast(city) {
+  const days = [];
+  const dayNames = [];
+  const now = new Date();
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + i + 1);
+    dayNames.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+  }
+  for (let i = 0; i < 5; i++) {
+    const cond = weightedPick(CONDITIONS);
+    const tempAdj = cond.name.includes('Snow') ? -12 : cond.name.includes('Rain') ? -3 : cond.name.includes('Clear') ? 3 : 0;
+    const hi = Math.round(city.tempBase + rand(-city.tempRange / 2, city.tempRange / 2) + tempAdj);
+    const lo = hi - randInt(4, 10);
+    const precip = cond.icon === 'rain' || cond.icon === 'heavyrain' || cond.icon === 'thunder' ? randInt(40, 95) : cond.icon === 'snow' ? randInt(30, 80) : randInt(0, 25);
+    days.push({ day: dayNames[i], hi, lo, cond, precip });
+  }
+  return days;
+}
+
+// ── Rendering ──
+function span(text, cls = '') {
+  const s = document.createElement('span');
+  s.className = cls;
+  s.textContent = text;
+  return s;
+}
+
+function addLine(fragments) {
+  // fragments: array of { text, cls } or a single string
+  const line = document.createElement('div');
+  line.className = 'output-line';
+  if (typeof fragments === 'string') {
+    line.textContent = fragments;
+  } else {
+    for (const f of fragments) {
+      line.appendChild(span(f.text, f.cls || ''));
+    }
+  }
+  output.appendChild(line);
+}
+
+function addHTML(html) {
+  const line = document.createElement('div');
+  line.className = 'output-line';
+  line.innerHTML = html;
+  output.appendChild(line);
+}
+
+function addBlank() { addLine(''); }
+
+function scrollDown() {
+  output.scrollTop = output.scrollHeight;
+}
+
+function resolveCity(name) {
+  const key = name.toLowerCase().trim();
+  // fuzzy match
+  for (const k of Object.keys(CITIES)) {
+    if (k === key || k.startsWith(key) || k.replace(/\s/g,'').startsWith(key.replace(/\s/g,''))) return CITIES[k];
+  }
+  return null;
+}
+
+// ── Command Handlers ──
+function cmdWeather(args) {
+  if (!args) {
+    addHTML('<span class="c-red">✗ Usage:</span> <span class="c-cyan">weather [city]</span>');
+    addHTML('<span class="c-dim">  Example: weather tokyo</span>');
+    return;
+  }
+  const city = resolveCity(args);
+  if (!city) {
+    addHTML(`<span class="c-red">✗ City not found:</span> <span class="c-white">${args}</span>`);
+    addHTML('<span class="c-dim">  Available cities: São Paulo, Rio de Janeiro, New York, Tokyo, London, Paris</span>');
+    return;
+  }
+
+  const w = generateWeather(city);
+  const icon = ICONS[w.cond.icon];
+  const tc = tempColor(w.temp);
+  const now = new Date();
+
+  addBlank();
+  addHTML(`<span class="c-cyan bold">╔══════════════════════════════════════════════════════════╗</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold glow">☁  WEATHER REPORT</span>                                       <span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╠══════════════════════════════════════════════════════════╣</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-white bold">📍 ${city.display}, ${city.country}</span><span class="c-dim">  (${city.lat.toFixed(2)}°, ${city.lon.toFixed(2)}°)</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">🕐 ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}  ${city.tz}</span>`);
+  addHTML(`<span class="c-cyan bold">╠══════════════════════════════════════════════════════════╣</span>`);
+
+  // Icon + Temperature side by side
+  for (let i = 0; i < icon.length; i++) {
+    let right = '';
+    if (i === 0) right = `<span class="c-dim">Condition:</span>  <span class="c-white bold">${w.cond.name}</span>`;
+    if (i === 1) right = `<span class="c-dim">Temp:      </span> <span class="${tc} bold">${w.temp}°C</span>  <span class="c-dim">(${Math.round(w.temp*9/5+32)}°F)</span>`;
+    if (i === 2) right = `<span class="c-dim">Feels Like:</span> <span class="${tempColor(w.feelsLike)}">${w.feelsLike}°C</span>`;
+    if (i === 3) right = `<span class="c-dim">Humidity:  </span> <span class="c-blue">${w.humidity}%</span>`;
+    if (i === 4) right = `<span class="c-dim">Dew Point: </span> <span class="c-cyan">${w.dewPoint}°C</span>`;
+    addHTML(`<span class="c-cyan bold">║</span>  <span class="c-yellow">${icon[i]}</span>  │  ${right}`);
+  }
+
+  addHTML(`<span class="c-cyan bold">║</span>  ─────────────────────┼───────────────────────────────────`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Wind:        </span> <span class="c-white">${w.windSpeed} km/h ${w.windDir}</span>  │  <span class="c-dim">Pressure:</span>    <span class="c-white">${w.pressure} hPa</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Visibility:  </span> <span class="c-white">${w.visibility} km</span>       │  <span class="c-dim">UV Index:</span>    <span class="${w.uvIndex>=8?'c-red':w.uvIndex>=5?'c-orange':'c-green'}">${w.uvIndex}</span>`);
+  addHTML(`<span class="c-cyan bold">╚══════════════════════════════════════════════════════════╝</span>`);
+  addBlank();
+}
+
+function cmdForecast(args) {
+  if (!args) {
+    addHTML('<span class="c-red">✗ Usage:</span> <span class="c-cyan">forecast [city]</span>');
+    addHTML('<span class="c-dim">  Example: forecast london</span>');
+    return;
+  }
+  const city = resolveCity(args);
+  if (!city) {
+    addHTML(`<span class="c-red">✗ City not found:</span> <span class="c-white">${args}</span>`);
+    addHTML('<span class="c-dim">  Available cities: São Paulo, Rio de Janeiro, New York, Tokyo, London, Paris</span>');
+    return;
+  }
+
+  const days = generateForecast(city);
+
+  addBlank();
+  addHTML(`<span class="c-cyan bold">╔══════════════════════════════════════════════════════════╗</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold glow">📅  5-DAY FORECAST</span>  —  <span class="c-white bold">${city.display}, ${city.country}</span>`);
+  addHTML(`<span class="c-cyan bold">╠══════════════════════════════════════════════════════════╣</span>`);
+
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    const ic = ICONS[d.cond.icon];
+    const dayPad = d.day.padEnd(16);
+    addHTML(`<span class="c-cyan bold">║</span>`);
+    addHTML(`<span class="c-cyan bold">║</span>  <span class="c-white bold">${dayPad}</span> <span class="c-yellow">${ic[1]}</span>  <span class="${tempColor(d.hi)} bold">${String(d.hi).padStart(3)}°C</span> <span class="c-dim">/</span> <span class="${tempColor(d.lo)}">${String(d.lo).padStart(3)}°C</span>  <span class="c-dim">│</span>  <span class="c-white">${d.cond.name.padEnd(15)}</span> <span class="c-blue">💧 ${String(d.precip).padStart(2)}%</span>`);
+  }
+
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╚══════════════════════════════════════════════════════════╝</span>`);
+  addBlank();
+}
+
+function cmdHelp() {
+  addBlank();
+  addHTML(`<span class="c-cyan bold">╔══════════════════════════════════════════════════════════╗</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold glow">📖  AVAILABLE COMMANDS</span>                                  <span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╠══════════════════════════════════════════════════════════╣</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold">weather [city]</span>    <span class="c-dim">—</span>  Current weather for a city`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold">forecast [city]</span>   <span class="c-dim">—</span>  5-day forecast for a city`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold">cities</span>            <span class="c-dim">—</span>  List all available cities`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold">help</span>              <span class="c-dim">—</span>  Show this help menu`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold">about</span>             <span class="c-dim">—</span>  About this application`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold">clear</span>             <span class="c-dim">—</span>  Clear the terminal`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Shortcuts: ↑↓ command history  │  TAB autocomplete</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╚══════════════════════════════════════════════════════════╝</span>`);
+  addBlank();
+}
+
+function cmdCities() {
+  addBlank();
+  addHTML(`<span class="c-cyan bold">╔══════════════════════════════════════════════════════════╗</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold glow">🌍  SUPPORTED CITIES</span>                                   <span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╠══════════════════════════════════════════════════════════╣</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  for (const k of Object.keys(CITIES)) {
+    const c = CITIES[k];
+    addHTML(`<span class="c-cyan bold">║</span>   <span class="c-green">▸</span> <span class="c-white bold">${c.display.padEnd(18)}</span> <span class="c-dim">${c.country}  │  ${c.tz.padEnd(6)}  │  ${c.lat.toFixed(2)}°, ${c.lon.toFixed(2)}°</span>`);
+  }
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╚══════════════════════════════════════════════════════════╝</span>`);
+  addBlank();
+}
+
+function cmdAbout() {
+  addBlank();
+  addHTML(`<span class="c-cyan bold">╔══════════════════════════════════════════════════════════╗</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-green bold glow">⚡  WEATHER CLI</span>  <span class="c-dim">v2.4.0</span>                                 <span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╠══════════════════════════════════════════════════════════╣</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">A terminal-based weather simulator with ASCII art</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">weather icons and realistic data generation.</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Built with:</span>  <span class="c-white">HTML, CSS, JavaScript</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Font:       </span>  <span class="c-white">Fira Code</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Theme:      </span>  <span class="c-green">Neon Terminal</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Cities:     </span>  <span class="c-white">6 global cities</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Data:       </span>  <span class="c-yellow">Simulated (random but realistic)</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>  <span class="c-dim">Type</span> <span class="c-green">help</span> <span class="c-dim">to see available commands.</span>`);
+  addHTML(`<span class="c-cyan bold">║</span>`);
+  addHTML(`<span class="c-cyan bold">╚══════════════════════════════════════════════════════════╝</span>`);
+  addBlank();
+}
+
+// ── Command History ──
+const history = [];
+let histIdx = -1;
+
+// ── Autocomplete ──
+const COMMANDS = ['weather','forecast','help','clear','about','cities'];
+const CITY_NAMES = Object.keys(CITIES);
+
+function autocomplete(val) {
+  const parts = val.split(/\s+/);
+  if (parts.length === 1) {
+    const match = COMMANDS.find(c => c.startsWith(parts[0].toLowerCase()));
+    if (match) return match;
+  }
+  if (parts.length >= 2 && (parts[0] === 'weather' || parts[0] === 'forecast')) {
+    const partial = parts.slice(1).join(' ').toLowerCase();
+    const match = CITY_NAMES.find(c => c.startsWith(partial));
+    if (match) return parts[0] + ' ' + match;
+  }
+  return null;
+}
+
+// ── Process Command ──
+function processCommand(raw) {
+  const trimmed = raw.trim();
+  // Echo command
+  addHTML(`<span class="c-green bold">❯</span> <span class="c-white">${trimmed || ''}</span>`);
+
+  if (!trimmed) { scrollDown(); return; }
+
+  // Push history
+  if (history[history.length - 1] !== trimmed) history.push(trimmed);
+  histIdx = history.length;
+
+  const parts = trimmed.split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const args = parts.slice(1).join(' ');
+
+  switch (cmd) {
+    case 'weather':  cmdWeather(args);  break;
+    case 'forecast': cmdForecast(args); break;
+    case 'help':     cmdHelp();         break;
+    case 'clear':    output.innerHTML = ''; showBanner(); break;
+    case 'about':    cmdAbout();        break;
+    case 'cities':   cmdCities();       break;
+    default:
+      addHTML(`<span class="c-red">✗ Unknown command:</span> <span class="c-white">${cmd}</span>`);
+      addHTML(`<span class="c-dim">  Type <span class="c-green">help</span> to see available commands.</span>`);
+  }
+
+  scrollDown();
+}
+
+// ── Input Handling ──
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    processCommand(input.value);
+    input.value = '';
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (histIdx > 0) { histIdx--; input.value = history[histIdx]; }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (histIdx < history.length - 1) { histIdx++; input.value = history[histIdx]; }
+    else { histIdx = history.length; input.value = ''; }
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    const result = autocomplete(input.value);
+    if (result) input.value = result;
+  } else if (e.key === 'l' && e.ctrlKey) {
+    e.preventDefault();
+    output.innerHTML = '';
+    showBanner();
+  }
+});
+
+// Keep focus on input
+document.addEventListener('click', () => input.focus());
+
+// ── Welcome Banner ──
+function showBanner() {
+  addHTML(`<span class="c-green bold">
+  ╦ ╦┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐  ╔═╗╦  ╦
+  ║║║├┤ ├─┤ │ ├─┤├┤ ├┬┘  ║  ║  ║
+  ╚╩╝└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─  ╚═╝╩═╝╩</span>`);
+  addBlank();
+  addHTML(`  <span class="c-dim">v2.4.0  ·  Terminal Weather Simulator</span>`);
+  addHTML(`  <span class="c-dim">Type</span> <span class="c-green bold">help</span> <span class="c-dim">for commands or</span> <span class="c-cyan bold">weather tokyo</span> <span class="c-dim">to start.</span>`);
+  addBlank();
+  addHTML(`<span class="c-dim">  ─────────────────────────────────────────────────────────</span>`);
+  addBlank();
+}
+
+showBanner();
+scrollDown();
+input.focus();
+</script>
+</body>
+</html>

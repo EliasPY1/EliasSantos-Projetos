@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[ TODO_MANAGER ] :: Task Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--surface:#0d1321;--surface2:#111827;--surface3:#151d2e;
+  --border:#1e2a3a;--border-glow:#00ff4133;
+  --green:#00ff41;--cyan:#00d4ff;--red:#ff0040;--yellow:#ffd000;--magenta:#ff00ff;--orange:#ff8c00;
+  --text:#c9d1d9;--text-dim:#6b7280;--text-bright:#e6edf3;
+}
+html{font-size:16px}
+body{
+  font-family:'Fira Code',monospace;background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse at 20% 50%,#00ff4108 0%,transparent 50%),
+    radial-gradient(ellipse at 80% 20%,#00d4ff06 0%,transparent 50%);
+}
+::selection{background:var(--green);color:var(--bg)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--green)}
+
+/* ── LAYOUT ── */
+.app{max-width:760px;margin:0 auto;padding:24px 16px 80px}
+
+/* ── HEADER ── */
+.header{text-align:center;margin-bottom:32px;position:relative}
+.header h1{
+  font-size:1.6rem;font-weight:700;letter-spacing:2px;
+  background:linear-gradient(135deg,var(--green),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:4px;
+}
+.header .subtitle{font-size:.7rem;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase}
+.scanline{
+  position:fixed;top:0;left:0;width:100%;height:2px;z-index:9999;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+  animation:scanline 4s linear infinite;opacity:.15;
+}
+@keyframes scanline{0%{top:0}100%{top:100vh}}
+
+/* ── STATS ── */
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px;
+}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:12px 8px;text-align:center;transition:all .3s;position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:0;
+  transition:opacity .3s;
+}
+.stat-card:hover::before{opacity:1}
+.stat-card:hover{border-color:var(--green);box-shadow:0 0 20px #00ff4110}
+.stat-number{font-size:1.5rem;font-weight:700;color:var(--green);line-height:1}
+.stat-label{font-size:.55rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.stat-card.cyan .stat-number{color:var(--cyan)}
+.stat-card.yellow .stat-number{color:var(--yellow)}
+.stat-card.red .stat-number{color:var(--red)}
+
+/* ── INPUT AREA ── */
+.input-area{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px;margin-bottom:16px;transition:border-color .3s,box-shadow .3s;
+}
+.input-area:focus-within{border-color:var(--green);box-shadow:0 0 25px #00ff4115}
+.input-row{display:flex;align-items:center;gap:8px}
+.prompt{color:var(--green);font-weight:700;font-size:.9rem;flex-shrink:0;user-select:none}
+.task-input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--text-bright);font-family:inherit;font-size:.85rem;
+  caret-color:var(--green);
+}
+.task-input::placeholder{color:var(--text-dim)}
+.input-meta{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.meta-select,.tag-input{
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:inherit;font-size:.7rem;padding:5px 10px;
+  outline:none;transition:border-color .3s;
+}
+.meta-select:focus,.tag-input:focus{border-color:var(--cyan)}
+.meta-select option{background:var(--surface2)}
+.tag-input{flex:1;min-width:120px}
+.add-btn{
+  background:linear-gradient(135deg,var(--green),#00cc33);color:var(--bg);
+  border:none;border-radius:6px;padding:6px 16px;font-family:inherit;font-size:.7rem;
+  font-weight:700;cursor:pointer;transition:all .3s;letter-spacing:1px;
+  text-transform:uppercase;margin-left:auto;
+}
+.add-btn:hover{box-shadow:0 0 20px #00ff4140;transform:translateY(-1px)}
+.add-btn:active{transform:scale(.96)}
+
+/* ── TOOLBAR ── */
+.toolbar{
+  display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;
+}
+.filter-group{display:flex;gap:4px;flex-wrap:wrap}
+.filter-btn{
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  color:var(--text-dim);font-family:inherit;font-size:.65rem;padding:5px 12px;
+  cursor:pointer;transition:all .3s;text-transform:uppercase;letter-spacing:.5px;
+}
+.filter-btn.active{color:var(--green);border-color:var(--green);background:var(--surface2);box-shadow:0 0 12px #00ff4115}
+.filter-btn:hover:not(.active){border-color:var(--text-dim);color:var(--text)}
+.search-box{
+  flex:1;min-width:160px;display:flex;align-items:center;gap:6px;
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:5px 10px;transition:border-color .3s;
+}
+.search-box:focus-within{border-color:var(--cyan)}
+.search-box svg{width:14px;height:14px;stroke:var(--text-dim);flex-shrink:0}
+.search-input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--text);font-family:inherit;font-size:.7rem;
+}
+.search-input::placeholder{color:var(--text-dim)}
+
+/* ── TASK LIST ── */
+.task-list{display:flex;flex-direction:column;gap:8px}
+
+.task-item{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;display:flex;align-items:flex-start;gap:12px;
+  transition:all .3s;cursor:grab;position:relative;overflow:hidden;
+  animation:taskIn .4s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes taskIn{from{opacity:0;transform:translateY(12px) scale(.97)}}
+.task-item:hover{border-color:#2a3a4a;box-shadow:0 2px 20px #00000030}
+.task-item.dragging{opacity:.4;border-color:var(--green);box-shadow:0 0 30px #00ff4120}
+.task-item.drag-over{border-color:var(--cyan);box-shadow:0 0 20px #00d4ff20;transform:scale(1.01)}
+.task-item.completed .task-text{text-decoration:line-through;color:var(--text-dim)}
+.task-item.completed{opacity:.6}
+.task-item.removing{animation:taskOut .35s cubic-bezier(.7,0,.84,0) forwards}
+@keyframes taskOut{to{opacity:0;transform:translateX(40px) scale(.95);max-height:0;padding:0;margin:0;border:0}}
+
+.checkbox{
+  width:20px;height:20px;border:2px solid var(--border);border-radius:50%;
+  flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .3s;margin-top:1px;
+}
+.checkbox:hover{border-color:var(--green)}
+.checkbox.checked{border-color:var(--green);background:var(--green)}
+.checkbox.checked svg{opacity:1}
+.checkbox svg{width:12px;height:12px;stroke:var(--bg);stroke-width:3;opacity:0;transition:opacity .2s}
+
+.task-content{flex:1;min-width:0}
+.task-text{font-size:.8rem;color:var(--text-bright);word-break:break-word;line-height:1.5}
+.task-meta{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.tag-badge{
+  font-size:.55rem;padding:2px 8px;border-radius:4px;
+  letter-spacing:.5px;text-transform:uppercase;font-weight:500;
+}
+.category-badge{
+  font-size:.55rem;padding:2px 8px;border-radius:4px;
+  background:#1e2a3a;color:var(--cyan);border:1px solid #1e3a4a;
+}
+.task-date{font-size:.55rem;color:var(--text-dim)}
+
+.task-actions{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .2s}
+.task-item:hover .task-actions{opacity:1}
+.action-btn{
+  width:28px;height:28px;border:1px solid transparent;border-radius:6px;
+  background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.action-btn svg{width:14px;height:14px}
+.action-btn.edit-btn:hover{border-color:var(--cyan);background:#00d4ff10}
+.action-btn.edit-btn svg{stroke:var(--cyan)}
+.action-btn.delete-btn:hover{border-color:var(--red);background:#ff004010}
+.action-btn.delete-btn svg{stroke:var(--red)}
+
+/* ── EDIT MODE ── */
+.edit-input{
+  width:100%;background:var(--surface2);border:1px solid var(--cyan);border-radius:6px;
+  color:var(--text-bright);font-family:inherit;font-size:.8rem;padding:6px 10px;
+  outline:none;caret-color:var(--cyan);
+}
+.edit-tags-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:inherit;font-size:.7rem;padding:4px 8px;
+  outline:none;margin-top:6px;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  text-align:center;padding:60px 20px;color:var(--text-dim);
+  animation:fadeIn .6s;
+}
+@keyframes fadeIn{from{opacity:0}}
+.ascii-art{
+  font-size:.55rem;line-height:1.3;color:var(--green);opacity:.35;
+  white-space:pre;margin-bottom:16px;display:inline-block;
+}
+.empty-state p{font-size:.75rem;margin-top:8px}
+.empty-hint{font-size:.6rem!important;color:var(--text-dim);opacity:.6}
+
+/* ── DELETE CONFIRM OVERLAY ── */
+.confirm-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  animation:fadeIn .2s;backdrop-filter:blur(4px);
+}
+.confirm-box{
+  background:var(--surface);border:1px solid var(--red);border-radius:12px;
+  padding:28px 32px;text-align:center;max-width:380px;width:90%;
+  animation:glitchIn .4s;position:relative;
+}
+@keyframes glitchIn{
+  0%{transform:scale(.8);opacity:0;filter:hue-rotate(90deg)}
+  30%{transform:scale(1.05) skewX(-2deg);filter:hue-rotate(0deg)}
+  50%{transform:scale(.98) skewX(1deg)}
+  100%{transform:scale(1) skewX(0)}
+}
+.confirm-box::before{
+  content:'';position:absolute;inset:-1px;border-radius:12px;
+  background:linear-gradient(135deg,var(--red),transparent,var(--red));
+  z-index:-1;opacity:.3;animation:glitchBorder 2s infinite;
+}
+@keyframes glitchBorder{
+  0%,100%{opacity:.3}
+  50%{opacity:.6}
+  25%,75%{transform:translate(1px,-1px)}
+}
+.confirm-icon{font-size:2rem;margin-bottom:12px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.confirm-title{font-size:.9rem;color:var(--red);font-weight:700;margin-bottom:8px;letter-spacing:1px}
+.confirm-text{font-size:.7rem;color:var(--text-dim);margin-bottom:20px;line-height:1.5}
+.confirm-btns{display:flex;gap:10px;justify-content:center}
+.confirm-btn{
+  font-family:inherit;font-size:.7rem;padding:8px 24px;border-radius:6px;
+  cursor:pointer;font-weight:600;letter-spacing:.5px;transition:all .2s;
+  text-transform:uppercase;
+}
+.btn-cancel{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.btn-cancel:hover{border-color:var(--text-dim)}
+.btn-delete{background:var(--red);border:1px solid var(--red);color:#fff}
+.btn-delete:hover{box-shadow:0 0 20px #ff004040;transform:translateY(-1px)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .header h1{font-size:1.2rem}
+  .task-actions{opacity:1}
+  .app{padding:16px 10px 80px}
+}
+@media(max-width:400px){
+  .stats{grid-template-columns:1fr 1fr}
+  .input-meta{flex-direction:column}
+  .add-btn{width:100%}
+}
+
+/* ── TAG COLORS ── */
+.tag-work{background:#1a1a3e;color:#818cf8;border:1px solid #2e2e5e}
+.tag-personal{background:#1a3a2a;color:#34d399;border:1px solid #1e4a3a}
+.tag-urgent{background:#3a1a1a;color:#f87171;border:1px solid #4a1e1e}
+.tag-idea{background:#3a2a1a;color:#fbbf24;border:1px solid #4a3a1e}
+.tag-bug{background:#3a1a2a;color:#fb7185;border:1px solid #4a1e3a}
+.tag-feature{background:#1a2a3a;color:#38bdf8;border:1px solid #1e3a5a}
+.tag-default{background:#1e2a3a;color:#94a3b8;border:1px solid #2a3a4a}
+
+/* ── FOOTER ── */
+.footer{
+  text-align:center;padding:24px;font-size:.55rem;color:var(--text-dim);
+  letter-spacing:1px;opacity:.4;
+}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="app">
+  <!-- HEADER -->
+  <header class="header">
+    <h1>[ TODO_MANAGER ]</h1>
+    <div class="subtitle">// task terminal v2.0</div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-number" id="statTotal">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card cyan">
+      <div class="stat-number" id="statActive">0</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-number" id="statDone">0</div>
+      <div class="stat-label">Done</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-number" id="statPercent">0%</div>
+      <div class="stat-label">Progress</div>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-area">
+    <div class="input-row">
+      <span class="prompt">❯</span>
+      <input class="task-input" id="taskInput" type="text" placeholder="Enter a new task..." autocomplete="off">
+    </div>
+    <div class="input-meta">
+      <select class="meta-select" id="categorySelect">
+        <option value="">— category —</option>
+        <option value="work">💼 Work</option>
+        <option value="personal">🏠 Personal</option>
+        <option value="urgent">🔥 Urgent</option>
+        <option value="idea">💡 Idea</option>
+        <option value="bug">🐛 Bug</option>
+        <option value="feature">✨ Feature</option>
+      </select>
+      <input class="tag-input" id="tagInput" type="text" placeholder="Tags (comma separated)..." autocomplete="off">
+      <button class="add-btn" id="addBtn">+ Add</button>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="active">Active</button>
+      <button class="filter-btn" data-filter="completed">Completed</button>
+    </div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" id="searchInput" type="text" placeholder="Search tasks...">
+    </div>
+  </div>
+
+  <!-- TASK LIST -->
+  <div class="task-list" id="taskList"></div>
+
+  <div class="footer">[ system ready — all data persisted locally ]</div>
+</div>
+
+<!-- DELETE CONFIRMATION (hidden) -->
+<div class="confirm-overlay" id="confirmOverlay" style="display:none">
+  <div class="confirm-box">
+    <div class="confirm-icon">⚠</div>
+    <div class="confirm-title">CONFIRM DELETION</div>
+    <div class="confirm-text" id="confirmText">This action cannot be undone. The task will be permanently removed.</div>
+    <div class="confirm-btns">
+      <button class="confirm-btn btn-cancel" id="cancelDelete">Cancel</button>
+      <button class="confirm-btn btn-delete" id="confirmDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  /* ── STATE ── */
+  const STORAGE_KEY = 'todo_manager_tasks_v2';
+  let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  let currentFilter = 'all';
+  let searchQuery = '';
+  let deleteTargetId = null;
+  let dragSrcId = null;
+
+  /* ── DOM ── */
+  const $ = s => document.querySelector(s);
+  const taskInput   = $('#taskInput');
+  const categorySel = $('#categorySelect');
+  const tagInput    = $('#tagInput');
+  const addBtn      = $('#addBtn');
+  const taskList    = $('#taskList');
+  const searchInput = $('#searchInput');
+  const overlay     = $('#confirmOverlay');
+
+  /* ── HELPERS ── */
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  const escHTML = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  const TAG_CLASSES = {work:'tag-work',personal:'tag-personal',urgent:'tag-urgent',idea:'tag-idea',bug:'tag-bug',feature:'tag-feature'};
+  const tagClass = t => TAG_CLASSES[t.toLowerCase()] || 'tag-default';
+
+  const CAT_LABELS = {work:'💼 Work',personal:'🏠 Personal',urgent:'🔥 Urgent',idea:'💡 Idea',bug:'🐛 Bug',feature:'✨ Feature'};
+
+  function formatDate(ts) {
+    const d = new Date(ts);
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  /* ── STATS ── */
+  function updateStats() {
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const active = total - done;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    $('#statTotal').textContent = total;
+    $('#statActive').textContent = active;
+    $('#statDone').textContent = done;
+    $('#statPercent').textContent = pct + '%';
+  }
+
+  /* ── RENDER ── */
+  function getFilteredTasks() {
+    let list = tasks;
+    if (currentFilter === 'active')    list = list.filter(t => !t.completed);
+    if (currentFilter === 'completed') list = list.filter(t => t.completed);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(t =>
+        t.text.toLowerCase().includes(q) ||
+        (t.category && t.category.toLowerCase().includes(q)) ||
+        t.tags.some(tag => tag.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }
+
+  function renderTasks() {
+    updateStats();
+    const filtered = getFilteredTasks();
+
+    if (filtered.length === 0) {
+      const isSearch = searchQuery || currentFilter !== 'all';
+      taskList.innerHTML = `
+        <div class="empty-state">
+          <div class="ascii-art">${isSearch ? 
+`   ___________
+  /  _______  \\
+ /  /       \\  \\
+|  |  EMPTY  |  |
+|  |  QUERY  |  |
+ \\  \\_______/  /
+  \\___________/` :
+`    ┌──────────────────┐
+    │                  │
+    │   NO TASKS YET   │
+    │                  │
+    │   ┌──┐  ┌──┐     │
+    │   │✓ │  │  │     │
+    │   └──┘  └──┘     │
+    │                  │
+    └──────────────────┘`}
+          </div>
+          <p>${isSearch ? 'No tasks match your search.' : 'Your task list is empty.'}</p>
+          <p class="empty-hint">${isSearch ? 'Try adjusting your filters.' : 'Type a task above and press Enter to get started.'}</p>
+        </div>`;
+      return;
+    }
+
+    taskList.innerHTML = filtered.map((task, idx) => {
+      const checkedClass = task.completed ? 'checked' : '';
+      const completedClass = task.completed ? 'completed' : '';
+      const tagsHTML = task.tags.map(t => `<span class="tag-badge ${tagClass(t)}">${escHTML(t)}</span>`).join('');
+      const catHTML = task.category ? `<span class="category-badge">${CAT_LABELS[task.category] || escHTML(task.category)}</span>` : '';
+
+      return `
+        <div class="task-item ${completedClass}" data-id="${task.id}" draggable="true" style="animation-delay:${idx * 0.04}s">
+          <div class="checkbox ${checkedClass}" data-action="toggle" data-id="${task.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="task-content">
+            <div class="task-text">${escHTML(task.text)}</div>
+            <div class="task-meta">
+              ${catHTML}${tagsHTML}
+              <span class="task-date">${formatDate(task.created)}</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <button class="action-btn edit-btn" data-action="edit" data-id="${task.id}" title="Edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="action-btn delete-btn" data-action="delete" data-id="${task.id}" title="Delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+
+    bindDragEvents();
+  }
+
+  /* ── ADD TASK ── */
+  function addTask() {
+    const text = taskInput.value.trim();
+    if (!text) { taskInput.focus(); return; }
+
+    const category = categorySel.value;
+    const tags = tagInput.value.split(',').map(t => t.trim()).filter(Boolean);
+
+    tasks.unshift({
+      id: uid(),
+      text,
+      completed: false,
+      category,
+      tags,
+      created: Date.now()
+    });
+    save();
+    taskInput.value = '';
+    tagInput.value = '';
+    categorySel.value = '';
+    taskInput.focus();
+    renderTasks();
+  }
+
+  addBtn.addEventListener('click', addTask);
+  taskInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+  /* ── TASK ACTIONS (delegation) ── */
+  taskList.addEventListener('click', e => {
+    const actionEl = e.target.closest('[data-action]');
+    if (!actionEl) return;
+    const action = actionEl.dataset.action;
+    const id = actionEl.dataset.id;
+
+    if (action === 'toggle') {
+      const t = tasks.find(t => t.id === id);
+      if (t) { t.completed = !t.completed; save(); renderTasks(); }
+    }
+    if (action === 'delete') {
+      deleteTargetId = id;
+      const t = tasks.find(t => t.id === id);
+      $('#confirmText').textContent = `"${t ? t.text.slice(0, 60) : ''}..." will be permanently removed.`;
+      overlay.style.display = 'flex';
+    }
+    if (action === 'edit') {
+      startEdit(id);
+    }
+  });
+
+  /* ── EDIT ── */
+  function startEdit(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const el = taskList.querySelector(`[data-id="${id}"]`);
+    if (!el) return;
+    const contentEl = el.querySelector('.task-content');
+    const oldText = task.text;
+    const oldTags = task.tags.join(', ');
+
+    contentEl.innerHTML = `
+      <input class="edit-input" value="${escHTML(oldText)}" autofocus>
+      <input class="edit-tags-input" value="${escHTML(oldTags)}" placeholder="Tags (comma separated)">
+    `;
+    const editInput = contentEl.querySelector('.edit-input');
+    const editTags = contentEl.querySelector('.edit-tags-input');
+    editInput.focus();
+    editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+
+    function commitEdit() {
+      const newText = editInput.value.trim();
+      if (newText) {
+        task.text = newText;
+        task.tags = editTags.value.split(',').map(t => t.trim()).filter(Boolean);
+        save();
+      }
+      renderTasks();
+    }
+    function cancelEdit() { renderTasks(); }
+
+    editInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+      if (e.key === 'Escape') cancelEdit();
+    });
+    editTags.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+      if (e.key === 'Escape') cancelEdit();
+    });
+    editInput.addEventListener('blur', e => {
+      if (e.relatedTarget === editTags) return;
+      setTimeout(commitEdit, 150);
+    });
+    editTags.addEventListener('blur', () => setTimeout(commitEdit, 150));
+  }
+
+  /* ── DELETE CONFIRM ── */
+  $('#cancelDelete').addEventListener('click', () => { overlay.style.display = 'none'; deleteTargetId = null; });
+  $('#confirmDelete').addEventListener('click', () => {
+    if (deleteTargetId) {
+      const el = taskList.querySelector(`[data-id="${deleteTargetId}"]`);
+      if (el) {
+        el.classList.add('removing');
+        setTimeout(() => {
+          tasks = tasks.filter(t => t.id !== deleteTargetId);
+          save();
+          deleteTargetId = null;
+          renderTasks();
+        }, 350);
+      } else {
+        tasks = tasks.filter(t => t.id !== deleteTargetId);
+        save();
+        deleteTargetId = null;
+        renderTasks();
+      }
+    }
+    overlay.style.display = 'none';
+  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.style.display = 'none'; deleteTargetId = null; } });
+
+  /* ── FILTERS ── */
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderTasks();
+    });
+  });
+
+  /* ── SEARCH ── */
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value.trim();
+    renderTasks();
+  });
+
+  /* ── DRAG & DROP ── */
+  function bindDragEvents() {
+    taskList.querySelectorAll('.task-item').forEach(item => {
+      item.addEventListener('dragstart', onDragStart);
+      item.addEventListener('dragend', onDragEnd);
+      item.addEventListener('dragover', onDragOver);
+      item.addEventListener('dragenter', onDragEnter);
+      item.addEventListener('dragleave', onDragLeave);
+      item.addEventListener('drop', onDrop);
+    });
+  }
+
+  function onDragStart(e) {
+    dragSrcId = this.dataset.id;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.dataset.id);
+  }
+  function onDragEnd() {
+    this.classList.remove('dragging');
+    taskList.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over'));
+  }
+  function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+  function onDragEnter(e) {
+    e.preventDefault();
+    if (this.dataset.id !== dragSrcId) this.classList.add('drag-over');
+  }
+  function onDragLeave() { this.classList.remove('drag-over'); }
+  function onDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    const targetId = this.dataset.id;
+    if (dragSrcId === targetId) return;
+
+    const srcIdx = tasks.findIndex(t => t.id === dragSrcId);
+    const tgtIdx = tasks.findIndex(t => t.id === targetId);
+    if (srcIdx === -1 || tgtIdx === -1) return;
+
+    const [moved] = tasks.splice(srcIdx, 1);
+    tasks.splice(tgtIdx, 0, moved);
+    save();
+    renderTasks();
+  }
+
+  /* ── KEYBOARD SHORTCUT ── */
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      searchInput.focus();
+    }
+    if (e.key === 'Escape') {
+      if (overlay.style.display === 'flex') {
+        overlay.style.display = 'none';
+        deleteTargetId = null;
+      }
+    }
+  });
+
+  /* ── INIT ── */
+  renderTasks();
+})();
+</script>
+</body>
+</html>

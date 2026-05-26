@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Portfólio profissional de Elias — Desenvolvedor de Software com projetos interativos e experiência em desenvolvimento web.">
+    <meta name="keywords" content="portfólio, programação, desenvolvedor, projetos, código, Elias">
+    <meta name="author" content="Elias">
+    <title>Elias | Portfólio de Projetos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Matrix Rain Canvas Background -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- Scanline Overlay -->
+    <div class="scanline-overlay"></div>
+
+    <!-- Navigation -->
+    <nav id="main-nav" class="nav">
+        <div class="nav-brand">
+            <span class="nav-prompt">elias@portfolio</span><span class="nav-separator">:</span><span class="nav-path">~</span><span class="nav-dollar">$</span>
+            <span class="cursor-blink">_</span>
+        </div>
+        <div class="nav-links">
+            <a href="#home" class="nav-link active" data-section="home">./início</a>
+            <a href="#about" class="nav-link" data-section="about">./sobre</a>
+            <a href="#experience" class="nav-link" data-section="experience">./experiência</a>
+            <a href="#projects" class="nav-link" data-section="projects">./projetos</a>
+            <a href="#contact" class="nav-link" data-section="contact">./contato</a>
+        </div>
+        <button id="nav-toggle" class="nav-toggle" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="mobile-menu">
+        <a href="#home" class="mobile-link" data-section="home">> ./início</a>
+        <a href="#about" class="mobile-link" data-section="about">> ./sobre</a>
+        <a href="#experience" class="mobile-link" data-section="experience">> ./experiência</a>
+        <a href="#projects" class="mobile-link" data-section="projects">> ./projetos</a>
+        <a href="#contact" class="mobile-link" data-section="contact">> ./contato</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section id="home" class="section hero-section">
+        <div class="hero-content">
+            <div class="terminal-window hero-terminal">
+                <div class="terminal-header">
+                    <div class="terminal-buttons">
+                        <span class="terminal-btn close"></span>
+                        <span class="terminal-btn minimize"></span>
+                        <span class="terminal-btn maximize"></span>
+                    </div>
+                    <span class="terminal-title">elias@dev ~ bash</span>
+                </div>
+                <div class="terminal-body">
+                    <div class="terminal-line">
+                        <span class="prompt">elias@dev:~$</span>
+                        <span class="command" id="hero-command"></span>
+                        <span class="cursor-blink">▌</span>
+                    </div>
+                    <div class="terminal-output" id="hero-output">
+                        <pre class="ascii-art" id="ascii-name"></pre>
+                        <p class="hero-subtitle">
+                            <span class="bracket">[</span>
+                            <span class="typed-role" id="typed-role"></span>
+                            <span class="cursor-blink">▌</span>
+                            <span class="bracket">]</span>
+                        </p>
+                        <div class="hero-stats">
+                            <span class="stat"><span class="stat-icon">⚡</span> status: <span class="text-green">disponível para contratação</span></span>
+                            <span class="stat"><span class="stat-icon">📍</span> localização: <span class="text-cyan">São Paulo, SP - Brasil</span></span>
+                            <span class="stat"><span class="stat-icon">💼</span> regime: <span class="text-magenta">CLT / PJ / Remoto</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-cta">
+                <a href="#projects" class="btn btn-primary glitch-hover" data-text="Ver Projetos">
+                    <span>[ Ver Projetos ]</span>
+                </a>
+                <a href="curriculo.pdf" download="Curriculo_Elias_Santos.pdf" class="btn btn-cv" id="btn-download-cv">
+                    <span>📄 [ Baixar Currículo ]</span>
+                </a>
+                <a href="#contact" class="btn btn-secondary">
+                    <span>[ Entrar em Contato ]</span>
+                </a>
+            </div>
+        </div>
+        <div class="scroll-indicator" id="scroll-indicator">
+            <span class="scroll-text">scroll down</span>
+            <div class="scroll-arrow">▼</div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="section about-section">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-prompt">~/sobre$</span> cat resumo_profissional.txt
+            </h2>
+
+            <!-- Professional Summary -->
+            <div class="pro-summary reveal">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <div class="terminal-buttons">
+                            <span class="terminal-btn close"></span>
+                            <span class="terminal-btn minimize"></span>
+                            <span class="terminal-btn maximize"></span>
+                        </div>
+                        <span class="terminal-title">resumo_profissional.txt</span>
+                    </div>
+                    <div class="terminal-body">
+                        <p class="about-line"><span class="line-number">01</span> <span class="comment">// Resumo Profissional</span></p>
+                        <p class="about-line"><span class="line-number">02</span></p>
+                        <p class="about-line"><span class="line-number">03</span> <span class="string">"Desenvolvedor de Software com experiência em criação de</span></p>
+                        <p class="about-line"><span class="line-number">04</span> <span class="string"> aplicações web completas. Tenho paixão por transformar ideias</span></p>
+                        <p class="about-line"><span class="line-number">05</span> <span class="string"> em soluções funcionais e bem estruturadas, com foco em</span></p>
+                        <p class="about-line"><span class="line-number">06</span> <span class="string"> código limpo, boas práticas e experiência do usuário."</span></p>
+                        <p class="about-line"><span class="line-number">07</span></p>
+                        <p class="about-line"><span class="line-number">08</span> <span class="keyword">const</span> <span class="variable">perfil</span> = {</p>
+                        <p class="about-line"><span class="line-number">09</span>   <span class="property">nome</span>: <span class="string">"Elias"</span>,</p>
+                        <p class="about-line"><span class="line-number">10</span>   <span class="property">cargo</span>: <span class="string">"Desenvolvedor de Software"</span>,</p>
+                        <p class="about-line"><span class="line-number">11</span>   <span class="property">disponibilidade</span>: <span class="boolean">true</span>,</p>
+                        <p class="about-line"><span class="line-number">12</span>   <span class="property">regimeDeTrabalho</span>: [<span class="string">"CLT"</span>, <span class="string">"PJ"</span>, <span class="string">"Remoto"</span>],</p>
+                        <p class="about-line"><span class="line-number">13</span>   <span class="property">idiomas</span>: [<span class="string">"Português (Nativo)"</span>, <span class="string">"Inglês (Intermediário)"</span>]</p>
+                        <p class="about-line"><span class="line-number">14</span> };</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="about-grid">
+                <!-- Technical Skills -->
+                <div class="skills-panel">
+                    <h3 class="skills-title"><span class="text-green">></span> skills --tech</h3>
+                    <div class="skills-grid" id="skills-grid">
+                        <!-- Skills will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- Soft Skills -->
+                <div class="skills-panel">
+                    <h3 class="skills-title"><span class="text-cyan">></span> skills --soft</h3>
+                    <div class="soft-skills-grid" id="soft-skills-grid">
+                        <!-- Soft skills will be dynamically inserted -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Experience & Education Section -->
+    <section id="experience" class="section experience-section">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-prompt">~/experiência$</span> cat carreira.log
+            </h2>
+
+            <div class="experience-grid">
+                <!-- Timeline -->
+                <div class="timeline-panel">
+                    <h3 class="skills-title"><span class="text-green">></span> experiência --profissional</h3>
+                    <div class="timeline" id="experience-timeline">
+                        <!-- Experience items will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- Education -->
+                <div class="education-panel">
+                    <h3 class="skills-title"><span class="text-cyan">></span> formação --acadêmica</h3>
+                    <div class="timeline" id="education-timeline">
+                        <!-- Education items will be dynamically inserted -->
+                    </div>
+
+                    <h3 class="skills-title" style="margin-top: var(--space-2xl);"><span class="text-magenta">></span> certificações --list</h3>
+                    <div class="certs-list" id="certs-list">
+                        <!-- Certifications will be dynamically inserted -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="section projects-section">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-prompt">~/projetos$</span> ls -la
+            </h2>
+            <p class="section-subtitle reveal">Projetos pessoais que demonstram minhas habilidades técnicas. Clique em <span class="text-green">"Executar"</span> para ver cada projeto rodando ao vivo.</p>
+            <div class="projects-toolbar">
+                <div class="filter-buttons" id="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">all/*</button>
+                    <!-- Filter buttons will be dynamically generated -->
+                </div>
+            </div>
+            <div class="projects-grid" id="projects-grid">
+                <!-- Project cards will be dynamically inserted -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Project Modal (for running demos) -->
+    <div id="project-modal" class="modal">
+        <div class="modal-content">
+            <div class="terminal-window modal-terminal">
+                <div class="terminal-header">
+                    <div class="terminal-buttons">
+                        <span class="terminal-btn close" id="modal-close"></span>
+                        <span class="terminal-btn minimize"></span>
+                        <span class="terminal-btn maximize" id="modal-fullscreen"></span>
+                    </div>
+                    <span class="terminal-title" id="modal-title">project.exe</span>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <iframe id="project-iframe" class="project-iframe" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" title="Project Demo"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Section -->
+    <section id="contact" class="section contact-section">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-prompt">~/contato$</span> cat links.txt
+            </h2>
+            <div class="contact-grid">
+                <div class="terminal-window contact-terminal">
+                    <div class="terminal-header">
+                        <div class="terminal-buttons">
+                            <span class="terminal-btn close"></span>
+                            <span class="terminal-btn minimize"></span>
+                            <span class="terminal-btn maximize"></span>
+                        </div>
+                        <span class="terminal-title">links.txt</span>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="social-links" id="social-links">
+                            <!-- Social links will be dynamically inserted -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="footer-text">
+                <span class="text-dimmed">/*</span>
+                Feito com <span class="text-red">♥</span> e muito <span class="text-green">código</span> por Elias
+                <span class="text-dimmed">*/</span>
+            </p>
+            <p class="footer-copyright">
+                <span class="text-dimmed">// © 2026 — Todos os direitos reservados</span>
+            </p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
